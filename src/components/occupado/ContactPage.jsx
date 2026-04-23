@@ -130,7 +130,7 @@ export default function ContactPage(props) {
                     }
                 </>
 
-                :
+                
 
                 <Button variant="secondary" onClick={() => {resetMessage()}}>New Message</Button>
             
