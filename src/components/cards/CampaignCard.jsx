@@ -21,6 +21,10 @@ export default function CampaignCard(props) {
         return days > 0 ? days : 1;
     };
 
+    function getCost() {
+        return (1-(props.index==0?(sessionStorage.getItem("discount")||0):0)) * 50 * getDays()
+    }
+
 
     return (
         <Card style={{ width: '18rem' }}>
@@ -41,7 +45,16 @@ export default function CampaignCard(props) {
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
                 />
-                <Card.Text>COST: {(1-(props.index==0?(sessionStorage.getItem("discount")||0):0)) * 50 * getDays()}</Card.Text>
+
+                <Button variant="primary" onClick={() => {
+                    
+                    props.checkout(startDate, endDate, getCost())
+                    
+                    setStartDate("")
+                    setEndDate("")
+                    }}>CHECKOUT</Button>
+
+                <Card.Text>COST: {getCost()}</Card.Text>
             </Card.Body>
         </Card>
     );

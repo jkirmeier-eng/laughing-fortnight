@@ -15,6 +15,8 @@ export default function SentCard(props) {
                 <Card.Text>EMAIL: {props.email}</Card.Text>
                 <Card.Text>MSG: {props.message}</Card.Text>
 
+                <Button variant="primary" onClick={() => {props.sendFollowUp(props.name, props.email)}}>Send Follow-Up</Button>
+
             </Card.Body>
         </Card>
     );

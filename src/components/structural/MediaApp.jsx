@@ -11,6 +11,8 @@ import { Navbar } from "react-bootstrap";
 import { Nav } from "react-bootstrap";
 import ContactPage from "../occupado/ContactPage";
 import CheckoutPage from "../occupado/CheckoutPage";
+import GalleryPage from "../occupado/GalleryPage";
+import SystemPage from "../occupado/SystemPage";
 
 export default function MediaApp() {
 
@@ -31,7 +33,9 @@ export default function MediaApp() {
       <Navbar bg="dark" variant="dark" style={{ overflowX: "auto" }}>
         <Nav className="flex-nowrap overflow-auto" style={{ whiteSpace: "nowrap" }}>
           <Nav.Link as={Link} to="/" style={{ color: "white" }} className="px-4 fs-4">Home</Nav.Link>
+          <Nav.Link as={Link} to="/gallery" style={{ color: "white" }} className="px-4 fs-4">Gallery</Nav.Link>
           <Nav.Link as={Link} to="/contact" style={{ color: "white" }} className="px-4 fs-4">Contact</Nav.Link>
+          <Nav.Link as={Link} to="/system" style={{ color: "white" }} className="px-4 fs-4">My System</Nav.Link>
           <Nav.Link as={Link} to="/checkout_page" style={{ color: "white" }} className="px-4 fs-4">Checkout</Nav.Link>
             {stuff.map((x) => (
               <Nav.Link as={Link} to={`/${x}`} key={x} style={{ color: "white" }} className="px-4 fs-4">
@@ -45,9 +49,12 @@ export default function MediaApp() {
 
         <Routes>
           <Route path="/" element={<MediaHome />} />
+          <Route path="/gallery" element={<GalleryPage />} />
           <Route path="/home" element={<MediaHome />} />
           <Route path="/contact" element={<ContactPage />}/>
+          <Route path="/system" element={<SystemPage />}/>
           <Route path="/checkout_page" element={<CheckoutPage />} />
+          
           {
             stuff.map((x) => {
               return <Route path={"/" + x} element={<MediaPage name={x}/>} />
