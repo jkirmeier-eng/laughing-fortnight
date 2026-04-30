@@ -1,69 +1,87 @@
-
-import { Router, Routes, Route } from "react-router";
-import { BrowserRouter } from "react-router";
-import { Link } from "react-router";
-import { useMemo } from "react";
-
-import MediaHome from "../occupado/MediaHome";
-import MediaPage from "../occupado/MediaPage";
-
-import { Navbar } from "react-bootstrap";
-import { Nav } from "react-bootstrap";
-import ContactPage from "../occupado/ContactPage";
+import { Container, Nav, Navbar } from "react-bootstrap";
+import { HashRouter, Link, Route, Routes } from "react-router-dom";
 import CheckoutPage from "../occupado/CheckoutPage";
+import ContactPage from "../occupado/ContactPage";
 import GalleryPage from "../occupado/GalleryPage";
+import InterestDiscountModal from "../modals/InterestDiscountModal";
+import MediaHome from "../occupado/MediaHome";
 import SystemPage from "../occupado/SystemPage";
 
-export default function MediaApp() {
+import { useLocation } from "react-router-dom";
+import PageHelpButton from "../help/PageHelpButton";
 
-  
+function GlobalHelp() {
+  const location = useLocation();
 
-  const stuff = useMemo(() => {
-    const list = []
+  const contentMap = {
+    "/": {
+      title: "Home",
+      body: "Overview of Ajay-Media, what it does, and entry points into the site.",
+    },
+    "/gallery": {
+      title: "Gallery",
+      body: "Example campaign visuals pulled from the fake backend.",
+    },
+    "/system": {
+      title: "System",
+      body: "Explains the KAAS system. Slides + images simulate internal tooling.",
+    },
+    "/contact": {
+      title: "Contact",
+      body: "Submit contact info, reuse previous contacts, and trigger discounts based on interest.",
+    },
+    "/checkout": {
+      title: "Checkout",
+      body: "Build campaigns, apply discounts, and simulate purchasing and canceling.",
+    },
+  };
 
-    for (let i = 0; i < 0; i++) {
-      list.push("Page " + i)
-    }
-
-    return list
-  })
+  const current = contentMap[location.pathname] ?? {
+    title: "Page",
+    body: "Information about this page.",
+  };
 
   return (
-    <>
-      <Navbar bg="dark" variant="dark" style={{ overflowX: "auto" }}>
-        <Nav className="flex-nowrap overflow-auto" style={{ whiteSpace: "nowrap" }}>
-          <Nav.Link as={Link} to="/" style={{ color: "white" }} className="px-4 fs-4">Home</Nav.Link>
-          <Nav.Link as={Link} to="/gallery" style={{ color: "white" }} className="px-4 fs-4">Gallery</Nav.Link>
-          <Nav.Link as={Link} to="/contact" style={{ color: "white" }} className="px-4 fs-4">Contact</Nav.Link>
-          <Nav.Link as={Link} to="/system" style={{ color: "white" }} className="px-4 fs-4">My System</Nav.Link>
-          <Nav.Link as={Link} to="/checkout_page" style={{ color: "white" }} className="px-4 fs-4">Checkout</Nav.Link>
-            {stuff.map((x) => (
-              <Nav.Link as={Link} to={`/${x}`} key={x} style={{ color: "white" }} className="px-4 fs-4">
-                {x}
-              </Nav.Link>
-            ))}
-        </Nav>
+    <div style={{ position: "fixed", top: 80, right: 20, zIndex: 1050 }}>
+      <PageHelpButton title={current.title}>
+        <p className="mb-0">{current.body}</p>
+      </PageHelpButton>
+    </div>
+  );
+}
+
+export default function MediaApp() {
+  return (
+    <HashRouter>
+      <InterestDiscountModal />
+
+      <Navbar bg="dark" variant="dark" expand="lg">
+        <Container>
+          <Navbar.Brand as={Link} to="/">
+            Ajay-Media
+          </Navbar.Brand>
+          <Navbar.Toggle />
+          <Navbar.Collapse>
+            <Nav className="ms-auto">
+              <Nav.Link as={Link} to="/">Home</Nav.Link>
+              <Nav.Link as={Link} to="/gallery">Gallery</Nav.Link>
+              <Nav.Link as={Link} to="/system">System</Nav.Link>
+              <Nav.Link as={Link} to="/contact">Contact</Nav.Link>
+              <Nav.Link as={Link} to="/checkout">Checkout</Nav.Link>
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
       </Navbar>
 
-      <div>
+      <GlobalHelp />
 
-        <Routes>
-          <Route path="/" element={<MediaHome />} />
-          <Route path="/gallery" element={<GalleryPage />} />
-          <Route path="/home" element={<MediaHome />} />
-          <Route path="/contact" element={<ContactPage />}/>
-          <Route path="/system" element={<SystemPage />}/>
-          <Route path="/checkout_page" element={<CheckoutPage />} />
-          
-          {
-            stuff.map((x) => {
-              return <Route path={"/" + x} element={<MediaPage name={x}/>} />
-            })
-          }
-          
-        </Routes>
-      </div>
-
-    </>
+      <Routes>
+        <Route path="/" element={<MediaHome />} />
+        <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/system" element={<SystemPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+      </Routes>
+    </HashRouter>
   );
 }

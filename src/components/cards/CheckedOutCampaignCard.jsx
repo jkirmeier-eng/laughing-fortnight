@@ -1,26 +1,26 @@
-import { Card } from "react-bootstrap";
-import { Button } from "react-bootstrap";
-
-import { Form } from "react-bootstrap";
-import { useRef } from "react";
-import { useState } from "react";
-
+import { Button, Card } from "react-bootstrap";
 
 export default function CheckedOutCampaignCard(props) {
-
-    
     return (
-        <Card style={{ width: '18rem' }}>
+        <Card className="h-100 border-0 shadow-sm rounded-4">
+            <Card.Body className="p-4">
+                <p className="text-uppercase text-muted fw-bold small mb-1">
+                    Purchased campaign
+                </p>
 
-            <Card.Body>
-                <Card.Title>Campaign Scheduled under {props.email}:</Card.Title>
-                <Card.Text>
-                    Specify what you would like out of this AD CAMPAIGN!
-                </Card.Text>
+                <h4 className="fw-bold">${props.cost}</h4>
 
-                <Button variant="danger" onClick={() => {props.cancel(props.index)}}>CANCEL</Button>
+                <p className="text-muted mb-3">
+                    Scheduled for <strong>{props.email}</strong> from <strong>{props.start}</strong> to <strong>{props.end}</strong>
+                </p>
 
-                <Card.Text>COST: {props.cost}</Card.Text>
+                <Button
+                    variant="outline-danger"
+                    className="rounded-pill"
+                    onClick={() => props.cancel(props.index)}
+                >
+                    Cancel campaign
+                </Button>
             </Card.Body>
         </Card>
     );

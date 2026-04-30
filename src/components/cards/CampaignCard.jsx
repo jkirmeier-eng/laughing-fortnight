@@ -1,60 +1,66 @@
-import { Card } from "react-bootstrap";
-import { Button } from "react-bootstrap";
-
-import { Form } from "react-bootstrap";
-import { useRef } from "react";
-import { useState } from "react";
-
+import { useMemo, useState } from "react";
+import { Button, Card, Form } from "react-bootstrap";
 
 export default function CampaignCard(props) {
-
     const [startDate, setStartDate] = useState("");
     const [endDate, setEndDate] = useState("");
+    const [packageType, setPackageType] = useState("starter");
 
-    function getDays() {
+    const cost = useMemo(() => {
+        if (packageType === "growth") return 1200;
+        if (packageType === "takeover") return 2600;
+        return 450;
+    }, [packageType]);
 
-        if (!startDate || !endDate) return 1;
-
-        const diff = new Date(endDate) - new Date(startDate);
-        const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-        return days > 0 ? days : 1;
+    const checkout = () => {
+        props.checkout(startDate, endDate, cost);
     };
 
-    function getCost() {
-        return (1-(props.index==0?(sessionStorage.getItem("discount")||0):0)) * 50 * getDays()
-    }
-
-
     return (
-        <Card style={{ width: '18rem' }}>
+        <Card className="h-100 border-0 shadow-sm rounded-4">
+            <Card.Body className="p-4">
+                <p className="text-uppercase text-muted fw-bold small mb-1">
+                    Campaign #{Number(props.index) + 1}
+                </p>
 
-            <Card.Body>
-                <Card.Title>AD CAMPAIGN {props.index}:</Card.Title>
-                <Card.Text>
-                    Specify what you would like out of this AD CAMPAIGN!
-                </Card.Text>
-                <Form.Control
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                />
+                <h4 className="fw-bold">Build campaign</h4>
 
-                <Form.Control
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                />
+                <Form.Group className="mb-3">
+                    <Form.Label>Start date</Form.Label>
+                    <Form.Control
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                    />
+                </Form.Group>
 
-                <Button variant="primary" onClick={() => {
-                    
-                    props.checkout(startDate, endDate, getCost())
-                    
-                    setStartDate("")
-                    setEndDate("")
-                    }}>CHECKOUT</Button>
+                <Form.Group className="mb-3">
+                    <Form.Label>End date</Form.Label>
+                    <Form.Control
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                    />
+                </Form.Group>
 
-                <Card.Text>COST: {getCost()}</Card.Text>
+                <Form.Group className="mb-3">
+                    <Form.Label>Package</Form.Label>
+                    <Form.Select
+                        value={packageType}
+                        onChange={(e) => setPackageType(e.target.value)}
+                    >
+                        <option value="starter">Starter — $450</option>
+                        <option value="growth">Growth — $1200</option>
+                        <option value="takeover">Takeover — $2600</option>
+                    </Form.Select>
+                </Form.Group>
+
+                <div className="d-flex justify-content-between align-items-center mt-4">
+                    <strong>${cost}</strong>
+                    <Button variant="dark" className="rounded-pill" onClick={checkout}>
+                        Checkout
+                    </Button>
+                </div>
             </Card.Body>
         </Card>
     );

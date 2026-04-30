@@ -1,79 +1,71 @@
-
-import { useState } from "react";
-import { Button } from "react-bootstrap";
-import { Form } from "react-router";
-
-import { Carousel } from "react-bootstrap";
-
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Button, Card, Carousel, Col, Container, Row } from "react-bootstrap";
+import { Link } from "react-router-dom";
+import { getTestimonials } from "../../api/fakeBackend";
 
 export default function MediaHome() {
+    const [testimonies, setTestimonies] = useState([]);
 
-    const [data, setData] = useState([]);
-    
-        useEffect(() => {
-            fetch("/laughing-fortnight/testimonies.json")
-            .then(res => res.json())
-            .then(data => {
-                setData(data)
-            });
-        }, []);
+    useEffect(() => {
+        getTestimonials().then(setTestimonies);
+    }, []);
 
     return (
-        <div style={{ maxWidth: "700px", margin: "0 auto", padding: "0 20px" }}>
-            <h1 style={{ textAlign: "center", color: "red", fontFamily: "Georgia, serif" }}>
-                Hello! Welcome to Ajay-Media!
-            </h1>
+        <Container className="py-5">
+            <Row className="align-items-center g-4">
+                <Col lg={7}>
+                    <p className="text-uppercase text-muted fw-bold small">Ajay-Media</p>
+                    <h1 className="display-4 fw-bold">
+                        Campaigns built to turn attention into customers.
+                    </h1>
+                    <p className="lead text-muted">
+                        Ajay-Media uses KAAS to turn one creative direction into multiple
+                        testable campaign variations.
+                    </p>
 
-            <hr />
+                    <div className="d-flex gap-2 mt-4">
+                        <Button as={Link} to="/contact" variant="dark">
+                            Contact us
+                        </Button>
+                        <Button as={Link} to="/gallery" variant="outline-dark">
+                            View gallery
+                        </Button>
+                    </div>
+                </Col>
 
-            <h2 style={{ textAlign: "center", color: "red", fontFamily: "Georgia, serif" }}>
-                Mission Statement
-            </h2>
+                <Col lg={5}>
+                    <Card className="border-0 shadow-sm rounded-4">
+                        <Card.Body className="p-4">
+                            <h4 className="fw-bold">One shoot. Many angles.</h4>
+                            <p className="text-muted mb-0">
+                                The site now behaves like a frontend wired to a backend, while
+                                still using local/session storage.
+                            </p>
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
 
-            <h5>Marketing that actually
+            <hr className="my-5" />
 
-            generates customers.
+            <h2 className="fw-bold mb-3">Testimonies</h2>
 
-            Unlike most agencies, Ajay-media does everything in-house. We use KAAS, our proprietary scripting system, to film once and generate numerous ad variations. One shoot, multiple winning ads.
-
-            Book a free strategy call
-
-            </h5>
-
-            <hr />
-
-            <h2 style={{ textAlign: "center", color: "red", fontFamily: "Georgia, serif" }}>
-                Testimonies
-            </h2>
-
-            <div style={{ 
-                border: "2px solid red", 
-                padding: "10px", 
-                borderRadius: "8px" 
-                }}>
+            {testimonies.length > 0 ? (
                 <Carousel>
-
-                    {
-                        data.map((testimony) => {
-                            return <Carousel.Item>
-                                <div style={{ 
-                                    height: "200px", 
-                                    display: "flex", 
-                                    flexDirection: "column", 
-                                    alignItems: "center", 
-                                    justifyContent: "center",
-                                    textAlign: "center"
-                                    }}>
-                                    <h5>{testimony.testimony}</h5>
-                                    <h3>{testimony.author}</h3>
-                                </div>
-                            </Carousel.Item>
-                        })
-                    }
-                    
+                    {testimonies.map((t, i) => (
+                        <Carousel.Item key={i}>
+                            <Card className="border-0 bg-light rounded-4">
+                                <Card.Body className="p-5">
+                                    <h4>“{t.testimony}”</h4>
+                                    <p className="text-muted fw-bold mb-0 mt-3">— {t.author}</p>
+                                </Card.Body>
+                            </Card>
+                        </Carousel.Item>
+                    ))}
                 </Carousel>
-            </div>
-        </div>
+            ) : (
+                <p className="text-muted">Loading testimonies...</p>
+            )}
+        </Container>
     );
 }
