@@ -7,17 +7,17 @@ export default function PageHelpButton({ title, children }) {
     return (
         <>
             <Button
+                variant="dark"
                 onClick={() => setShow(true)}
+                aria-label={`Open help information for ${title}`}
                 style={{
                     width: 56,
                     height: 56,
                     borderRadius: "50%",
-                    fontSize: "1.5rem",
+                    fontSize: 22,
                     fontWeight: "bold",
-                    boxShadow: "0 6px 18px rgba(0,0,0,0.2)",
+                    boxShadow: "0 6px 20px rgba(0,0,0,0.25)",
                 }}
-                className="bg-dark text-white border-0 d-flex align-items-center justify-content-center"
-                aria-label={`Help: ${title}`}
             >
                 ?
             </Button>
@@ -31,7 +31,7 @@ export default function PageHelpButton({ title, children }) {
 
                 <Modal.Footer>
                     <Button variant="dark" onClick={() => setShow(false)}>
-                        Got it
+                        Close
                     </Button>
                 </Modal.Footer>
             </Modal>

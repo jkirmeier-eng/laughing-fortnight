@@ -11,9 +11,9 @@ export default function GalleryPage() {
 
   return (
     <Container className="py-5">
-      <p className="text-uppercase text-muted fw-bold small">Gallery</p>
+      <p className="text-uppercase text-secondary fw-bold small">Gallery</p>
       <h1 className="display-5 fw-bold">Campaign examples.</h1>
-      <p className="lead text-muted">
+      <p className="lead">
         Dummy media resources pulled through the fake backend.
       </p>
 
@@ -21,14 +21,18 @@ export default function GalleryPage() {
         {items.map((item) => (
           <Col md={6} lg={4} key={item.id}>
             <Card className="h-100 border-0 shadow-sm rounded-4 overflow-hidden">
-              <Card.Img variant="top" src={item.image} />
+              <Card.Img
+                variant="top"
+                src={item.image}
+                alt={`${item.title}: ${item.description}`}
+              />
               <Card.Body className="p-4">
                 <Badge bg="dark" className="mb-2">
                   {item.type}
                 </Badge>
 
-                <Card.Title className="fw-bold">{item.title}</Card.Title>
-                <Card.Text className="text-muted">{item.description}</Card.Text>
+                <h2 className="fw-bold h4">{item.title}</h2>
+                <p className="text-secondary">{item.description}</p>
               </Card.Body>
             </Card>
           </Col>

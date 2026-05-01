@@ -2,7 +2,6 @@ import { Button, Form } from "react-bootstrap";
 
 export default function ContactFormPsuedoCard({
     nameRef,
-    emailRef,
     messageRef,
     handleSubmit,
     resetMessage,
@@ -10,17 +9,12 @@ export default function ContactFormPsuedoCard({
     return (
         <div className="p-4 bg-light rounded-4 shadow-sm">
             <Form>
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-3" controlId="contact-name">
                     <Form.Label>Name</Form.Label>
-                    <Form.Control ref={nameRef} />
+                    <Form.Control ref={nameRef} autoComplete="name" />
                 </Form.Group>
 
-                <Form.Group className="mb-3">
-                    <Form.Label>Email</Form.Label>
-                    <Form.Control ref={emailRef} />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
+                <Form.Group className="mb-3" controlId="contact-message">
                     <Form.Label>Message</Form.Label>
                     <Form.Control as="textarea" rows={5} ref={messageRef} />
                 </Form.Group>

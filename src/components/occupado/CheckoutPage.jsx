@@ -1,86 +1,168 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
+import { getSessionToken } from "../../api/fakeAuth";
+import {
+    createCampaignOrder,
+    deleteCampaignOrder,
+    getCampaignOrders,
+    getCurrentDiscount,
+} from "../../api/fakeBackend";
 import CampaignCard from "../cards/CampaignCard";
 import CheckedOutCampaignCard from "../cards/CheckedOutCampaignCard";
-import { cancelCampaign, getCampaigns, getDiscount, saveCampaign } from "../../api/fakeBackend";
+import InterestDiscountModal from "../modals/InterestDiscountModal";
 
 export default function CheckoutPage() {
-    const [numCampaigns, setNumCampaigns] = useState(0);
+    const [draftCampaigns, setDraftCampaigns] = useState([]);
     const [checkedOutCampaigns, setCheckedOutCampaigns] = useState([]);
     const [discount, setDiscount] = useState(0);
 
-    useEffect(() => {
-        getCampaigns().then(setCheckedOutCampaigns);
-        getDiscount().then(setDiscount);
-    }, []);
+    const reloadCheckoutData = async () => {
+        const token = getSessionToken();
 
-    const checkout = async (startDate, endDate, cost) => {
-        const email = prompt("Enter your email:");
-        if (!email) return;
+        if (!token) {
+            setCheckedOutCampaigns([]);
+            setDiscount(0);
+            return;
+        }
 
-        const finalCost = Math.round(cost * (1 - discount / 100));
+        const campaigns = await getCampaignOrders(token);
+        const currentDiscount = await getCurrentDiscount(token);
 
-        const updated = await saveCampaign({
-            startDate,
-            endDate,
-            cost: finalCost,
-            originalCost: cost,
-            discount,
-            email,
-            id: crypto.randomUUID?.() ?? String(Date.now()),
-        });
-
-        setCheckedOutCampaigns(updated);
+        setCheckedOutCampaigns(campaigns);
+        setDiscount(currentDiscount);
     };
 
-    const cancel = async (index) => {
-        const confirmed = confirm("Are you sure you would like to unschedule this Campaign?");
+    useEffect(() => {
+        reloadCheckoutData();
+    }, []);
+
+    const addDraftCampaign = (initialStartDate = "", initialEndDate = "") => {
+        setDraftCampaigns((drafts) => [
+            ...drafts,
+            {
+                id: crypto.randomUUID?.() ?? String(Date.now()),
+                initialStartDate,
+                initialEndDate,
+            },
+        ]);
+    };
+
+    const checkout = async (startDate, endDate, cost, discountUsed) => {
+        const token = getSessionToken();
+
+        if (!token) {
+            alert("Please login first.");
+            return;
+        }
+
+        const result = await createCampaignOrder(token, {
+            startDate,
+            endDate,
+            cost,
+            discountUsed,
+        });
+
+        if (!result.ok) {
+            alert(result.message);
+            return;
+        }
+
+        setDraftCampaigns((drafts) => drafts.slice(1));
+        await reloadCheckoutData();
+    };
+
+    const cancel = async (id) => {
+        const token = getSessionToken();
+
+        if (!token) {
+            alert("Please login first.");
+            return;
+        }
+
+        const confirmed = confirm("Are you sure you would like to unschedule this campaign?");
         if (!confirmed) return;
 
-        const updated = await cancelCampaign(index);
-        setCheckedOutCampaigns(updated);
+        const result = await deleteCampaignOrder(token, id);
+
+        if (result.returnedDiscount > 0) {
+            alert(`Your ${result.returnedDiscount}% discount has been returned.`);
+        }
+
+        await reloadCheckoutData();
+    };
+
+    const edit = async (id) => {
+        const token = getSessionToken();
+
+        if (!token) {
+            alert("Please login first.");
+            return;
+        }
+
+        const result = await deleteCampaignOrder(token, id);
+
+        if (!result.ok) {
+            alert(result.message);
+            return;
+        }
+
+        if (result.returnedDiscount > 0) {
+            alert(`Your ${result.returnedDiscount}% discount has been returned.`);
+        }
+
+        addDraftCampaign(result.campaign.startDate, result.campaign.endDate);
+        await reloadCheckoutData();
     };
 
     return (
         <Container className="py-5">
+            <InterestDiscountModal onDiscountChanged={reloadCheckoutData} />
+
             <p className="text-uppercase text-muted fw-bold small">Checkout</p>
             <h1 className="display-5 fw-bold">Schedule an ad campaign.</h1>
 
             {discount > 0 && (
                 <p className="text-success fw-bold">
-                    Current saved discount: {discount}% off
+                    Current saved discount: {discount}% off first unscheduled campaign
                 </p>
             )}
 
             <div className="d-flex justify-content-between align-items-center mt-4">
-                <h3 className="fw-bold">Unscheduled campaigns</h3>
-                <Button variant="dark" onClick={() => setNumCampaigns((n) => n + 1)}>
+                <h2 className="fw-bold">Unscheduled campaigns</h2>
+                <Button variant="dark" onClick={() => addDraftCampaign()}>
                     + Add Campaign
                 </Button>
             </div>
 
             <Row className="g-3 mt-2">
-                {Array.from({ length: numCampaigns }).map((_, i) => (
-                    <Col md={6} lg={4} key={i}>
-                        <CampaignCard index={i} checkout={checkout} />
+                {draftCampaigns.map((draft, i) => (
+                    <Col md={6} lg={4} key={draft.id}>
+                        <CampaignCard
+                            index={i}
+                            initialStartDate={draft.initialStartDate}
+                            initialEndDate={draft.initialEndDate}
+                            checkout={checkout}
+                        />
                     </Col>
                 ))}
             </Row>
 
             <hr className="my-5" />
 
-            <h3 className="fw-bold">Scheduled campaigns</h3>
+            <h2 className="fw-bold">Scheduled campaigns</h2>
 
             <Row className="g-3 mt-2">
-                {checkedOutCampaigns.map((campaign, index) => (
-                    <Col md={6} lg={4} key={campaign.id ?? index}>
+                {checkedOutCampaigns.map((campaign) => (
+                    <Col md={6} lg={4} key={campaign.id}>
                         <CheckedOutCampaignCard
                             email={campaign.email}
                             cost={campaign.cost}
-                            start={campaign.startDate}
-                            end={campaign.endDate}
-                            index={index}
+                            startDate={campaign.startDate}
+                            endDate={campaign.endDate}
+                            discountUsed={campaign.discountUsed}
+                            id={campaign.id}
                             cancel={cancel}
+                            edit={edit}
                         />
                     </Col>
                 ))}

@@ -1,13 +1,12 @@
 import { Container, Nav, Navbar } from "react-bootstrap";
-import { HashRouter, Link, Route, Routes } from "react-router-dom";
+import { HashRouter, Link, Route, Routes, useLocation } from "react-router-dom";
 import CheckoutPage from "../occupado/CheckoutPage";
 import ContactPage from "../occupado/ContactPage";
 import GalleryPage from "../occupado/GalleryPage";
-import InterestDiscountModal from "../modals/InterestDiscountModal";
+import LoginPage from "../occupado/LoginPage";
 import MediaHome from "../occupado/MediaHome";
 import SystemPage from "../occupado/SystemPage";
-
-import { useLocation } from "react-router-dom";
+import LoginModal from "../modals/LoginModal";
 import PageHelpButton from "../help/PageHelpButton";
 
 function GlobalHelp() {
@@ -16,7 +15,7 @@ function GlobalHelp() {
   const contentMap = {
     "/": {
       title: "Home",
-      body: "Overview of Ajay-Media, what it does, and entry points into the site.",
+      body: "Overview of Ajay-Media and the main entry points into the site.",
     },
     "/gallery": {
       title: "Gallery",
@@ -24,15 +23,19 @@ function GlobalHelp() {
     },
     "/system": {
       title: "System",
-      body: "Explains the KAAS system. Slides + images simulate internal tooling.",
+      body: "Explains the KAAS system. Slides and images simulate internal tooling.",
     },
     "/contact": {
       title: "Contact",
-      body: "Submit contact info, reuse previous contacts, and trigger discounts based on interest.",
+      body: "Submit contact messages using the current session login.",
     },
     "/checkout": {
       title: "Checkout",
-      body: "Build campaigns, apply discounts, and simulate purchasing and canceling.",
+      body: "Build campaigns, apply discounts, edit scheduled campaigns, and cancel campaigns.",
+    },
+    "/login": {
+      title: "Login",
+      body: "Change the current frontend session email. No password is used in this demo.",
     },
   };
 
@@ -42,7 +45,14 @@ function GlobalHelp() {
   };
 
   return (
-    <div style={{ position: "fixed", top: 80, right: 20, zIndex: 1050 }}>
+    <div
+      style={{
+        position: "fixed",
+        bottom: 24,
+        right: 24,
+        zIndex: 1050,
+      }}
+    >
       <PageHelpButton title={current.title}>
         <p className="mb-0">{current.body}</p>
       </PageHelpButton>
@@ -53,21 +63,36 @@ function GlobalHelp() {
 export default function MediaApp() {
   return (
     <HashRouter>
-      <InterestDiscountModal />
+      <LoginModal />
 
       <Navbar bg="dark" variant="dark" expand="lg">
         <Container>
           <Navbar.Brand as={Link} to="/">
             Ajay-Media
           </Navbar.Brand>
+
           <Navbar.Toggle />
+
           <Navbar.Collapse>
             <Nav className="ms-auto">
-              <Nav.Link as={Link} to="/">Home</Nav.Link>
-              <Nav.Link as={Link} to="/gallery">Gallery</Nav.Link>
-              <Nav.Link as={Link} to="/system">System</Nav.Link>
-              <Nav.Link as={Link} to="/contact">Contact</Nav.Link>
-              <Nav.Link as={Link} to="/checkout">Checkout</Nav.Link>
+              <Nav.Link className="text-white" as={Link} to="/">
+                Home
+              </Nav.Link>
+              <Nav.Link className="text-white" as={Link} to="/gallery">
+                Gallery
+              </Nav.Link>
+              <Nav.Link className="text-white" as={Link} to="/system">
+                System
+              </Nav.Link>
+              <Nav.Link className="text-white" as={Link} to="/contact">
+                Contact
+              </Nav.Link>
+              <Nav.Link className="text-white" as={Link} to="/checkout">
+                Checkout
+              </Nav.Link>
+              <Nav.Link className="text-white" as={Link} to="/login">
+                Login
+              </Nav.Link>
             </Nav>
           </Navbar.Collapse>
         </Container>
@@ -81,6 +106,7 @@ export default function MediaApp() {
         <Route path="/system" element={<SystemPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/login" element={<LoginPage />} />
       </Routes>
     </HashRouter>
   );

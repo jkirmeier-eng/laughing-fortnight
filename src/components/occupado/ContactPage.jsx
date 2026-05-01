@@ -1,64 +1,65 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, Col, Container, Form, Modal, Row } from "react-bootstrap";
-import DiscountCard from "../cards/DiscountCard";
-import SentCard from "../cards/SentCard";
-import { getContacts, saveContact, read, write } from "../../api/fakeBackend";
-
+import { Col, Container, Row } from "react-bootstrap";
+import { getSessionToken } from "../../api/fakeAuth";
+import {
+    createContactMessage,
+    getContactMessages,
+} from "../../api/fakeBackend";
 import ContactFormPsuedoCard from "../cards/ContactFormPsuedoCard";
+import SentCard from "../cards/SentCard";
 
 export default function ContactPage() {
     const nameRef = useRef();
-    const emailRef = useRef();
     const messageRef = useRef();
 
     const [sentContactInfo, setSentContactInfo] = useState([]);
-    const [showDiscount, setShowDiscount] = useState(false);
-    const [interestLevel, setInterestLevel] = useState("");
 
-    const [interestResolved, setInterestResolved] = useState(read("interestResolved", false));
+    const loadContacts = async () => {
+        const token = getSessionToken();
+
+        if (!token) {
+            setSentContactInfo([]);
+            return;
+        }
+
+        const contacts = await getContactMessages(token);
+        setSentContactInfo(contacts);
+    };
 
     useEffect(() => {
-        getContacts().then(setSentContactInfo);
+        loadContacts();
     }, []);
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     const resetMessage = () => {
         nameRef.current.value = "";
-        emailRef.current.value = "";
         messageRef.current.value = "";
     };
 
-    const sendFollowUp = (name, email) => {
+    const sendFollowUp = (name) => {
         nameRef.current.value = name;
-        emailRef.current.value = email;
         messageRef.current.value = `Following up with ${name}...`;
     };
 
     const handleSubmit = async () => {
-        const name = nameRef.current.value;
-        const email = emailRef.current.value;
-        const message = messageRef.current.value;
+        const token = getSessionToken();
 
-        if (!emailRegex.test(email)) {
-            alert("Email appears to be invalid! Please try again!");
+        if (!token) {
+            alert("Please login first.");
             return;
         }
 
-        const updated = await saveContact([name, email, message]);
-        setSentContactInfo(updated);
+        const result = await createContactMessage(token, {
+            name: nameRef.current.value,
+            message: messageRef.current.value,
+        });
 
-        resetMessage();
-    };
-
-    const checkInterest = () => {
-        const parsed = Number(interestLevel);
-
-        if (!Number.isNaN(parsed) && parsed <= 5) {
-            setInterestResolved(true);
-            write("interestResolved", true)
-            setShowDiscount(true);
+        if (!result.ok) {
+            alert(result.message);
+            return;
         }
+
+        await loadContacts();
+        resetMessage();
     };
 
     return (
@@ -68,31 +69,14 @@ export default function ContactPage() {
                     <p className="text-uppercase text-muted fw-bold small">Contact</p>
                     <h1 className="display-5 fw-bold">Start a campaign conversation.</h1>
                     <p className="lead text-muted">
-                        Submit contact info, save prior messages, send follow-ups, and
-                        trigger a discount when interest is low.
+                        Submit contact info using your current session, save prior messages,
+                        and send follow-ups.
                     </p>
-
-                    { !interestResolved && (
-                        <Form.Group className="mt-4">
-                            <Form.Label>Interest level, 1-10</Form.Label>
-                            <div className="d-flex gap-2">
-                                <Form.Control
-                                    value={interestLevel}
-                                    onChange={(e) => setInterestLevel(e.target.value)}
-                                    placeholder="Example: 4"
-                                />
-                                <Button variant="dark" onClick={checkInterest}>
-                                    Check
-                                </Button>
-                            </div>
-                        </Form.Group>)
-                    }
                 </Col>
 
                 <Col lg={7}>
                     <ContactFormPsuedoCard
                         nameRef={nameRef}
-                        emailRef={emailRef}
                         messageRef={messageRef}
                         handleSubmit={handleSubmit}
                         resetMessage={resetMessage}
@@ -100,33 +84,20 @@ export default function ContactPage() {
                 </Col>
             </Row>
 
-            <h3 className="fw-bold mt-5">Prior contacts</h3>
+            <h2 className="fw-bold mt-5">Prior contacts</h2>
 
             <Row className="g-3 mt-2">
-                {sentContactInfo.map((info, i) => (
-                    <Col md={6} lg={4} key={i}>
+                {sentContactInfo.map((info) => (
+                    <Col md={6} lg={4} key={info.id}>
                         <SentCard
-                            name={info[0]}
-                            email={info[1]}
-                            message={info[2]}
+                            name={info.name}
+                            email={info.email}
+                            message={info.message}
                             sendFollowUp={sendFollowUp}
                         />
                     </Col>
                 ))}
             </Row>
-
-            <Modal show={showDiscount} onHide={() => setShowDiscount(false)} centered>
-                <Modal.Header closeButton>
-                    <Modal.Title>Low-interest offer</Modal.Title>
-                </Modal.Header>
-
-                <Modal.Body>
-                    <DiscountCard
-                        potency={Number(interestLevel)}
-                        discontinue={() => setShowDiscount(false)}
-                    />
-                </Modal.Body>
-            </Modal>
         </Container>
     );
 }

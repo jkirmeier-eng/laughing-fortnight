@@ -1,67 +1,108 @@
 import { useEffect, useState } from "react";
 import { Button, Form, Modal } from "react-bootstrap";
-import { saveDiscount, shouldAskInterest } from "../../api/fakeBackend";
+import { getSessionToken } from "../../api/fakeAuth";
+import {
+    resolveInterestLevel,
+    shouldShowCheckoutInterestModal,
+} from "../../api/fakeBackend";
+import DiscountCard from "../cards/DiscountCard";
 
-export default function InterestDiscountModal() {
+export default function InterestDiscountModal({ onDiscountChanged }) {
     const [show, setShow] = useState(false);
     const [interest, setInterest] = useState(5);
-    const [offer, setOffer] = useState(null);
+    const [showDiscountCard, setShowDiscountCard] = useState(false);
 
     useEffect(() => {
-        shouldAskInterest().then(setShow);
+        async function loadModalState() {
+            const token = getSessionToken();
+            if (!token) {
+                setShow(false);
+                return;
+            }
+
+            const shouldShow = await shouldShowCheckoutInterestModal(token);
+            setShow(shouldShow);
+        }
+
+        loadModalState();
     }, []);
 
     const calculateOffer = async () => {
-        const discount = Math.max(0, Math.round((10 - Number(interest)) * 4));
-        await saveDiscount(discount);
-        setOffer(discount);
+        const token = getSessionToken();
+
+        if (!token) {
+            alert("Please login first.");
+            setShow(false);
+            return;
+        }
+
+        const result = await resolveInterestLevel(token, interest);
+
+        if (!result.ok) {
+            alert(result.message);
+            return;
+        }
+
+        if (onDiscountChanged) onDiscountChanged();
+
+        if (result.discountTriggered) {
+            setShowDiscountCard(true);
+        } else {
+            setShow(false);
+        }
+    };
+
+    const close = () => {
+        setShow(false);
+        if (onDiscountChanged) onDiscountChanged();
     };
 
     return (
-        <Modal show={show} onHide={() => setShow(false)} centered>
+        <Modal show={show} onHide={close} centered>
             <Modal.Header closeButton>
-                <Modal.Title>Before you keep browsing...</Modal.Title>
+                <Modal.Title>
+                    {showDiscountCard ? "Low-interest offer" : "Before checkout"}
+                </Modal.Title>
             </Modal.Header>
 
             <Modal.Body>
-                {offer === null ? (
-                    <>
-                        <p className="text-muted">
-                            How interested are you in running a campaign with Ajay-Media?
-                        </p>
+                {!showDiscountCard ? (
+                    <Form>
+                        <Form.Group controlId="interest-discount-range">
+                            <Form.Label>
+                                How interested are you in running a campaign with Ajay-Media?
+                            </Form.Label>
 
-                        <Form.Range
-                            min={1}
-                            max={10}
-                            value={interest}
-                            onChange={(e) => setInterest(e.target.value)}
-                        />
+                            <Form.Range
+                                min={1}
+                                max={10}
+                                value={interest}
+                                onChange={(e) => setInterest(e.target.value)}
+                                aria-describedby="interest-discount-value"
+                            />
 
-                        <div className="d-flex justify-content-between">
-                            <span>Low interest</span>
-                            <strong>{interest}/10</strong>
-                            <span>High interest</span>
-                        </div>
-                    </>
+                            <div
+                                id="interest-discount-value"
+                                className="d-flex justify-content-between"
+                            >
+                                <span>Low interest</span>
+                                <strong>{interest}/10</strong>
+                                <span>High interest</span>
+                            </div>
+                        </Form.Group>
+                    </Form>
                 ) : (
-                    <p>
-                        Since your interest is not fully there yet, we can offer{" "}
-                        <strong>{offer}% off</strong> your first campaign.
-                    </p>
+                    <DiscountCard discontinue={close} />
                 )}
             </Modal.Body>
 
-            <Modal.Footer>
-                {offer === null ? (
+            {!showDiscountCard && (
+                <Modal.Footer>
                     <Button variant="dark" onClick={calculateOffer}>
                         See offer
                     </Button>
-                ) : (
-                    <Button variant="dark" onClick={() => setShow(false)}>
-                        Continue
-                    </Button>
-                )}
-            </Modal.Footer>
+                </Modal.Footer>
+            )}
         </Modal>
     );
 }

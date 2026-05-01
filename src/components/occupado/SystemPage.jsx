@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Button, Container, Image, Pagination } from "react-bootstrap";
-import PageHelpButton from "../help/PageHelpButton";
+import {
+    getSystemSlideImages,
+    getSystemSlides,
+} from "../../api/fakeBackend";
 import SlidePage from "./SlidePage";
-import { getSystemSlideImages, getSystemSlides } from "../../api/fakeBackend";
 
 export default function SystemPage() {
     const [pageNumber, setPageNumber] = useState(0);
@@ -10,33 +12,35 @@ export default function SystemPage() {
     const [images, setImages] = useState([]);
 
     useEffect(() => {
-        getSystemSlides().then(setData);
-        getSystemSlideImages().then(setImages);
+        async function loadSystemData() {
+            const slides = await getSystemSlides();
+            const slideImages = await getSystemSlideImages();
+
+            setData(slides);
+            setImages(slideImages);
+        }
+
+        loadSystemData();
     }, []);
 
     const currentSlide = data[pageNumber];
-    const currentImage = images[pageNumber % images.length];
+    const currentImage = images.length > 0 ? images[pageNumber % images.length] : null;
 
     return (
         <Container className="py-5">
-            <div className="d-flex justify-content-between align-items-start gap-3">
-                <div>
-                    <p className="text-uppercase text-muted fw-bold small">System</p>
-                    <h1 className="display-5 fw-bold">KAAS system overview.</h1>
-                    <p className="lead text-muted">
-                        This page explains the fake internal system behind Ajay-Media: how
-                        campaigns are structured, varied, and prepared for checkout.
-                    </p>
-                </div>
+            <p className="text-uppercase text-secondary fw-bold small">System</p>
+            <h1 className="display-5 fw-bold">KAAS system overview.</h1>
 
-                
-            </div>
+            <p className="lead">
+                This page explains the fake internal system behind Ajay-Media. The page
+                asks the backend for slide content and images, then displays the result.
+            </p>
 
-            <div className="p-4 bg-light rounded-4 shadow-sm my-4">
+            <section className="p-4 bg-light rounded-4 shadow-sm my-4">
                 {currentImage && (
                     <Image
                         src={currentImage}
-                        alt={`Visual for KAAS system slide ${pageNumber + 1}`}
+                        alt={`Illustration for KAAS system slide ${pageNumber + 1}`}
                         fluid
                         rounded
                         className="mb-4"
@@ -51,9 +55,12 @@ export default function SystemPage() {
                 ) : (
                     <p>Loading system slides...</p>
                 )}
-            </div>
+            </section>
 
-            <div className="d-flex gap-3 align-items-center flex-wrap">
+            <nav
+                className="d-flex gap-3 align-items-center flex-wrap"
+                aria-label="System slide pagination"
+            >
                 <Button
                     variant="outline-dark"
                     disabled={pageNumber === 0}
@@ -66,8 +73,9 @@ export default function SystemPage() {
                     {data.map((_, i) => (
                         <Pagination.Item
                             key={i}
-                            active={i === pageNumber}
+                            active={pageNumber === i}
                             onClick={() => setPageNumber(i)}
+                            aria-label={`Go to system slide ${i + 1}`}
                         >
                             {i + 1}
                         </Pagination.Item>
@@ -81,7 +89,7 @@ export default function SystemPage() {
                 >
                     Next
                 </Button>
-            </div>
+            </nav>
         </Container>
     );
 }

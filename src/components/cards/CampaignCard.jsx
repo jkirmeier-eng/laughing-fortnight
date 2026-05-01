@@ -1,66 +1,94 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Card, Form } from "react-bootstrap";
+import { getSessionToken } from "../../api/fakeAuth";
+import { quoteCampaign } from "../../api/fakeBackend";
 
 export default function CampaignCard(props) {
-    const [startDate, setStartDate] = useState("");
-    const [endDate, setEndDate] = useState("");
-    const [packageType, setPackageType] = useState("starter");
+    const [startDate, setStartDate] = useState(props.initialStartDate ?? "");
+    const [endDate, setEndDate] = useState(props.initialEndDate ?? "");
+    const [quote, setQuote] = useState({
+        ok: true,
+        days: 1,
+        baseCost: 50,
+        discount: 0,
+        estimatedCost: 50,
+    });
 
-    const cost = useMemo(() => {
-        if (packageType === "growth") return 1200;
-        if (packageType === "takeover") return 2600;
-        return 450;
-    }, [packageType]);
+    useEffect(() => {
+        async function loadQuote() {
+            const token = getSessionToken();
 
-    const checkout = () => {
-        props.checkout(startDate, endDate, cost);
+            const result = await quoteCampaign(token, {
+                startDate,
+                endDate,
+                index: props.index,
+            });
+
+            setQuote(result);
+        }
+
+        loadQuote();
+    }, [startDate, endDate, props.index]);
+
+    const handleCheckout = () => {
+        if (!quote.ok) {
+            alert(quote.message);
+            return;
+        }
+
+        props.checkout(startDate, endDate, quote.estimatedCost, quote.discount);
+        setStartDate("");
+        setEndDate("");
     };
+
+    const cardNumber = props.index + 1;
 
     return (
         <Card className="h-100 border-0 shadow-sm rounded-4">
             <Card.Body className="p-4">
-                <p className="text-uppercase text-muted fw-bold small mb-1">
-                    Campaign #{Number(props.index) + 1}
+                <p className="text-uppercase text-secondary fw-bold small mb-1">
+                    Ad campaign {cardNumber}
                 </p>
 
-                <h4 className="fw-bold">Build campaign</h4>
+                <h3 className="fw-bold">Schedule campaign</h3>
 
-                <Form.Group className="mb-3">
-                    <Form.Label>Start date</Form.Label>
-                    <Form.Control
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                    />
-                </Form.Group>
+                <p className="text-secondary">Specify the dates for this ad campaign.</p>
 
-                <Form.Group className="mb-3">
-                    <Form.Label>End date</Form.Label>
-                    <Form.Control
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                    />
-                </Form.Group>
+                <Form>
+                    <Form.Group className="mb-3" controlId={`campaign-${cardNumber}-start`}>
+                        <Form.Label>Start date</Form.Label>
+                        <Form.Control
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                        />
+                    </Form.Group>
 
-                <Form.Group className="mb-3">
-                    <Form.Label>Package</Form.Label>
-                    <Form.Select
-                        value={packageType}
-                        onChange={(e) => setPackageType(e.target.value)}
-                    >
-                        <option value="starter">Starter — $450</option>
-                        <option value="growth">Growth — $1200</option>
-                        <option value="takeover">Takeover — $2600</option>
-                    </Form.Select>
-                </Form.Group>
+                    <Form.Group className="mb-3" controlId={`campaign-${cardNumber}-end`}>
+                        <Form.Label>End date</Form.Label>
+                        <Form.Control
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            isInvalid={!quote.ok}
+                        />
+                        <Form.Control.Feedback type="invalid">
+                            {quote.message}
+                        </Form.Control.Feedback>
+                    </Form.Group>
+                </Form>
 
-                <div className="d-flex justify-content-between align-items-center mt-4">
-                    <strong>${cost}</strong>
-                    <Button variant="dark" className="rounded-pill" onClick={checkout}>
-                        Checkout
-                    </Button>
-                </div>
+                {quote.discount > 0 && props.index === 0 && (
+                    <p className="text-success fw-bold mb-2">
+                        Discount applied: {quote.discount}% off
+                    </p>
+                )}
+
+                <p className="fw-bold">Estimated cost: ${quote.estimatedCost}</p>
+
+                <Button variant="dark" className="rounded-pill" onClick={handleCheckout}>
+                    Schedule campaign
+                </Button>
             </Card.Body>
         </Card>
     );

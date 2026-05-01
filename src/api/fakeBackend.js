@@ -1,83 +1,419 @@
 const delay = (ms = 250) => new Promise((res) => setTimeout(res, ms));
 
 const keys = {
-    contacts: "sentInfo",
-    campaigns: "checkedOutCampaigns",
-    discount: "discount",
-    interestSeen: "interest_seen",
+    sessions: "ajay_sessions",
+    contacts: "ajay_contacts",
+    campaigns: "ajay_campaigns",
+    discount: "ajay_discount",
+    interestResolved: "ajay_interest_resolved",
 };
 
-function read(key, fallback) {
+function readStorage(key, fallback) {
     try {
-        return JSON.parse(sessionStorage.getItem(key)) ?? fallback;
+        return JSON.parse(localStorage.getItem(key)) ?? fallback;
     } catch {
         return fallback;
     }
 }
 
-function write(key, value) {
-    sessionStorage.setItem(key, JSON.stringify(value));
+function writeStorage(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
     return value;
 }
 
-export async function getContacts() {
-    await delay();
-    return read(keys.contacts, []);
+function makeId() {
+    return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
 
-export async function saveContact(contact) {
-    await delay();
-    const contacts = read(keys.contacts, []);
-    return write(keys.contacts, [...contacts, contact]);
+function makeToken() {
+    return `fake-token-${makeId()}`;
 }
 
-export async function getCampaigns() {
-    await delay();
-    return read(keys.campaigns, []);
+function userKey(baseKey, email) {
+    return `${baseKey}:${email}`;
 }
 
-export async function saveCampaign(campaign) {
-    await delay();
-    const campaigns = read(keys.campaigns, []);
-    return write(keys.campaigns, [...campaigns, campaign]);
+function daysBetween(startDate, endDate) {
+    if (!startDate || !endDate) return 1;
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diff = end - start;
+
+    if (diff < 0) return -1;
+    if (diff === 0) return 1;
+
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-export async function cancelCampaign(index) {
-    await delay();
-    const campaigns = read(keys.campaigns, []);
-    return write(
-        keys.campaigns,
-        campaigns.filter((_, i) => i !== index)
-    );
-}
+function getEmailForToken(token) {
+    if (!token) return null;
 
-export async function getDiscount() {
-    await delay();
-    return Number(sessionStorage.getItem(keys.discount) || 0);
-}
+    const sessions = readStorage(keys.sessions, {});
+    const session = sessions[token];
 
-export async function saveDiscount(discount) {
-    await delay();
-    sessionStorage.setItem(keys.discount, String(discount));
-    return discount;
-}
+    if (!session) return null;
 
-export async function shouldAskInterest() {
-    await delay();
-
-    if (sessionStorage.getItem(keys.interestSeen)) {
-        return false;
+    if (Date.now() > session.expiresAt) {
+        delete sessions[token];
+        writeStorage(keys.sessions, sessions);
+        return null;
     }
 
-    const shouldShow = Math.random() < 0.25;
-    sessionStorage.setItem(keys.interestSeen, "true");
-    return shouldShow;
+    return session.email;
 }
+
+function requireSession(token) {
+    const email = getEmailForToken(token);
+
+    if (!email) {
+        return {
+            ok: false,
+            message: "Please login first.",
+            email: null,
+        };
+    }
+
+    return {
+        ok: true,
+        email,
+    };
+}
+
+// AUTH API
+
+export async function loginWithEmail(email) {
+    await delay();
+
+    const token = makeToken();
+    const sessions = readStorage(keys.sessions, {});
+
+    sessions[token] = {
+        email,
+        createdAt: Date.now(),
+        expiresAt: Date.now() + 1000 * 60 * 60,
+    };
+
+    writeStorage(keys.sessions, sessions);
+
+    return {
+        ok: true,
+        token,
+        email,
+    };
+}
+
+export async function getActiveUser(token) {
+    await delay();
+
+    const auth = requireSession(token);
+    if (!auth.ok) return null;
+
+    return {
+        email: auth.email,
+    };
+}
+
+export async function logoutUser(token) {
+    await delay();
+
+    const sessions = readStorage(keys.sessions, {});
+    delete sessions[token];
+    writeStorage(keys.sessions, sessions);
+
+    return { ok: true };
+}
+
+// CONTACT API
+
+export async function getContactMessages(token) {
+    await delay();
+
+    const auth = requireSession(token);
+    if (!auth.ok) return [];
+
+    return readStorage(userKey(keys.contacts, auth.email), []);
+}
+
+export async function createContactMessage(token, { name, message }) {
+    await delay();
+
+    const auth = requireSession(token);
+
+    if (!auth.ok) {
+        return {
+            ok: false,
+            message: auth.message,
+        };
+    }
+
+    const contacts = readStorage(userKey(keys.contacts, auth.email), []);
+
+    const contact = {
+        id: makeId(),
+        name,
+        email: auth.email,
+        message,
+        createdAt: new Date().toISOString(),
+    };
+
+    writeStorage(userKey(keys.contacts, auth.email), [...contacts, contact]);
+
+    return { ok: true, contact };
+}
+
+// INTEREST / DISCOUNT API
+
+export async function getInterestState(token) {
+    await delay();
+
+    const auth = requireSession(token);
+
+    if (!auth.ok) {
+        return {
+            resolved: false,
+            discount: 0,
+        };
+    }
+
+    return {
+        resolved: readStorage(userKey(keys.interestResolved, auth.email), false),
+        discount: readStorage(userKey(keys.discount, auth.email), 0),
+    };
+}
+
+export async function resolveInterestLevel(token, interestLevel) {
+    await delay();
+
+    const auth = requireSession(token);
+
+    if (!auth.ok) {
+        return {
+            ok: false,
+            message: auth.message,
+        };
+    }
+
+    const parsed = Number(interestLevel);
+
+    if (Number.isNaN(parsed) || parsed < 1 || parsed > 10) {
+        return {
+            ok: false,
+            message: "Interest level must be a number from 1 to 10.",
+        };
+    }
+
+    writeStorage(userKey(keys.interestResolved, auth.email), true);
+
+    if (parsed > 5) {
+        writeStorage(userKey(keys.discount, auth.email), 0);
+
+        return {
+            ok: true,
+            discountTriggered: false,
+            discount: 0,
+        };
+    }
+
+    const discount = Math.round((10 - parsed) * 4);
+    writeStorage(userKey(keys.discount, auth.email), discount);
+
+    return {
+        ok: true,
+        discountTriggered: true,
+        discount,
+    };
+}
+
+export async function getCurrentDiscount(token) {
+    await delay();
+
+    const auth = requireSession(token);
+    if (!auth.ok) return 0;
+
+    return readStorage(userKey(keys.discount, auth.email), 0);
+}
+
+export async function returnDiscount(token, discount) {
+    await delay();
+
+    const auth = requireSession(token);
+    if (!auth.ok) return 0;
+
+    const current = readStorage(userKey(keys.discount, auth.email), 0);
+    const returned = Math.max(current, Number(discount) || 0);
+
+    writeStorage(userKey(keys.discount, auth.email), returned);
+
+    return returned;
+}
+
+export async function shouldShowCheckoutInterestModal(token) {
+    await delay();
+
+    const auth = requireSession(token);
+    if (!auth.ok) return false;
+
+    return !readStorage(userKey(keys.interestResolved, auth.email), false);
+}
+
+// CAMPAIGN API
+
+export async function quoteCampaign(token, { startDate, endDate, index }) {
+    await delay();
+
+    const days = daysBetween(startDate, endDate);
+
+    if (days < 0) {
+        return {
+            ok: false,
+            message: "End date cannot be before start date.",
+            days: 0,
+            baseCost: 0,
+            discount: 0,
+            estimatedCost: 0,
+        };
+    }
+
+
+    const today = new Date().toISOString().split("T")[0];
+
+    if (startDate < today || endDate < today) {
+        return {
+            ok: false,
+            message: "Dates cannot be in the past.",
+            days: 0,
+            baseCost: 0,
+            discount: 0,
+            estimatedCost: 0,
+        };
+    }
+
+    const discount = index === 0 ? await getCurrentDiscount(token) : 0;
+    const baseCost = days * 50;
+    const estimatedCost = Math.round(baseCost * (1 - discount / 100));
+
+    return {
+        ok: true,
+        days,
+        baseCost,
+        discount,
+        estimatedCost,
+    };
+}
+
+export async function getCampaignOrders(token) {
+    await delay();
+
+    const auth = requireSession(token);
+    if (!auth.ok) return [];
+
+    return readStorage(userKey(keys.campaigns, auth.email), []);
+}
+
+export async function createCampaignOrder(token, { startDate, endDate, cost, discountUsed }) {
+    await delay();
+
+    const auth = requireSession(token);
+
+    if (!auth.ok) {
+        return {
+            ok: false,
+            message: auth.message,
+        };
+    }
+
+    const days = daysBetween(startDate, endDate);
+
+    if (days < 0) {
+        return {
+            ok: false,
+            message: "End date cannot be before start date.",
+        };
+    }
+
+    const campaigns = readStorage(userKey(keys.campaigns, auth.email), []);
+
+    const campaign = {
+        id: makeId(),
+        startDate,
+        endDate,
+        cost,
+        discountUsed: Number(discountUsed) || 0,
+        email: auth.email,
+        createdAt: new Date().toISOString(),
+    };
+
+    writeStorage(userKey(keys.campaigns, auth.email), [...campaigns, campaign]);
+
+    if (campaign.discountUsed > 0) {
+        writeStorage(userKey(keys.discount, auth.email), 0);
+    }
+
+    return { ok: true, campaign };
+}
+
+export async function deleteCampaignOrder(token, id) {
+    await delay();
+
+    const auth = requireSession(token);
+
+    if (!auth.ok) {
+        return {
+            ok: false,
+            message: auth.message,
+        };
+    }
+
+    const campaigns = readStorage(userKey(keys.campaigns, auth.email), []);
+    const target = campaigns.find((campaign) => campaign.id === id);
+
+    if (!target) {
+        return {
+            ok: false,
+            message: "Campaign not found.",
+        };
+    }
+
+    const updated = campaigns.filter((campaign) => campaign.id !== id);
+    writeStorage(userKey(keys.campaigns, auth.email), updated);
+
+    if (target.discountUsed > 0) {
+        const returned = await returnDiscount(token, target.discountUsed);
+
+        return {
+            ok: true,
+            returnedDiscount: target.discountUsed,
+            currentDiscount: returned,
+            campaign: target,
+        };
+    }
+
+    return {
+        ok: true,
+        returnedDiscount: 0,
+        campaign: target,
+    };
+}
+
+// CONTENT API
 
 export async function getSystemSlides() {
     await delay();
     const res = await fetch("/laughing-fortnight/system_slides.json");
     return res.json();
+}
+
+export async function getSystemSlideImages() {
+    await delay();
+
+    return [
+        "https://picsum.photos/seed/kaas-system-1/900/500",
+        "https://picsum.photos/seed/kaas-system-2/900/500",
+        "https://picsum.photos/seed/kaas-system-3/900/500",
+        "https://picsum.photos/seed/kaas-system-4/900/500",
+        "https://picsum.photos/seed/kaas-system-5/900/500",
+    ];
 }
 
 export async function getTestimonials() {
@@ -111,17 +447,5 @@ export async function getGalleryItems() {
             image: "https://picsum.photos/seed/ajay-gallery-3/900/600",
             description: "A sample conversion-focused campaign concept.",
         },
-    ];
-}
-
-export async function getSystemSlideImages() {
-    await delay();
-
-    return [
-        "https://picsum.photos/seed/kaas-system-1/900/500",
-        "https://picsum.photos/seed/kaas-system-2/900/500",
-        "https://picsum.photos/seed/kaas-system-3/900/500",
-        "https://picsum.photos/seed/kaas-system-4/900/500",
-        "https://picsum.photos/seed/kaas-system-5/900/500",
     ];
 }

@@ -4,14 +4,14 @@ export default function SentCard(props) {
     return (
         <Card className="h-100 border-0 shadow-sm rounded-4">
             <Card.Body className="p-4">
-                <p className="text-uppercase text-muted fw-bold small mb-1">
+                <p className="text-uppercase text-secondary fw-bold small mb-1">
                     Prior contact
                 </p>
 
-                <Card.Title className="fw-bold">{props.name}</Card.Title>
-                <Card.Subtitle className="mb-3 text-muted">{props.email}</Card.Subtitle>
+                <h3 className="fw-bold h5">{props.name}</h3>
+                <p className="text-secondary mb-3">{props.email}</p>
 
-                <Card.Text>{props.message}</Card.Text>
+                <p>{props.message}</p>
 
                 <Button
                     variant="outline-dark"
